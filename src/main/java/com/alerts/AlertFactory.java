@@ -22,4 +22,11 @@ public class AlertFactory {
     public Alert createCriticalBloodPressureAlert(String patientId, String condition) {
         return new Alert(patientId, "Critical Blood Pressure -" + condition, System.currentTimeMillis());
     }
+
+    public Alert createCriticalBloodSaturationAlert(String patientId) {
+        return new Alert(patientId, "Critical Blood Saturation", System.currentTimeMillis());
+    }
+    public Alert createHighBloodSaturationDifference(String patientId) {
+        return new Alert(patientId, "High Blood Saturation Difference", System.currentTimeMillis());
+    }
 }
