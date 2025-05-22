@@ -1,32 +1,49 @@
 package com.alerts;
 
-import com.data_management.Patient;
-
-public class AlertFactory {
+public abstract class AlertFactory {
     
-    public Alert createHighBloodPressureDiastolicAlert(String patientId) {
-        return new Alert(patientId, "High Blood Pressure Diastolic", System.currentTimeMillis());
-    }
+    // Factory method to be implemented by subclasses
+    public abstract Alert createAlert(String patientId, String condition, long timestamp);
+}
 
-    public Alert createLowBloodPressureDiastolicAlert(String patientId) {
-        return new Alert( patientId, "Low Blood Pressure Diastolic", System.currentTimeMillis());
+// Concrete factory for Blood Pressure alerts
+class BloodPressureAlertFactory extends AlertFactory {
+    @Override
+    public Alert createAlert(String patientId, String condition, long timestamp) {
+        if (condition.equals("High Diastolic")) {
+            return new Alert(patientId, "High Blood Pressure Diastolic", timestamp);
+        } else if (condition.equals("Low Diastolic")) {
+            return new Alert(patientId, "Low Blood Pressure Diastolic", timestamp);
+        } else if (condition.equals("High Systolic")) {
+            return new Alert(patientId, "High Blood Pressure Systolic", timestamp);
+        } else if (condition.equals("Low Systolic")) {
+            return new Alert(patientId, "Low Blood Pressure Systolic", timestamp);
+        } else if (condition.startsWith("Critical")) {
+            return new Alert(patientId, "Critical Blood Pressure - " + condition, timestamp);
+        } else {
+            return new Alert(patientId, "Blood Pressure Alert - " + condition, timestamp);
+        }
     }
-        public Alert createHighBloodPressureSystolicAlert(String patientId) {
-        return new Alert(patientId, "High Blood Pressure Systolic", System.currentTimeMillis());
-    }
+}
 
-    public Alert createLowBloodPressureSystolicAlert(String patientId) {
-        return new Alert( patientId, "Low Blood Pressure Systolic", System.currentTimeMillis());
+// Concrete factory for Blood Oxygen alerts
+class BloodOxygenAlertFactory extends AlertFactory {
+    @Override
+    public Alert createAlert(String patientId, String condition, long timestamp) {
+        if (condition.equals("Critical")) {
+            return new Alert(patientId, "Critical Blood Saturation", timestamp);
+        } else if (condition.equals("High Difference")) {
+            return new Alert(patientId, "High Blood Saturation Difference", timestamp);
+        } else {
+            return new Alert(patientId, "Blood Oxygen Alert - " + condition, timestamp);
+        }
     }
+}
 
-    public Alert createCriticalBloodPressureAlert(String patientId, String condition) {
-        return new Alert(patientId, "Critical Blood Pressure -" + condition, System.currentTimeMillis());
-    }
-
-    public Alert createCriticalBloodSaturationAlert(String patientId) {
-        return new Alert(patientId, "Critical Blood Saturation", System.currentTimeMillis());
-    }
-    public Alert createHighBloodSaturationDifference(String patientId) {
-        return new Alert(patientId, "High Blood Saturation Difference", System.currentTimeMillis());
+// Concrete factory for ECG alerts
+class ECGAlertFactory extends AlertFactory {
+    @Override
+    public Alert createAlert(String patientId, String condition, long timestamp) {
+        return new Alert(patientId, "ECG Alert - " + condition, timestamp);
     }
 }

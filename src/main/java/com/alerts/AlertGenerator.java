@@ -1,13 +1,12 @@
 package com.alerts;
 
-import com.data_management.DataStorage;
-import com.data_management.Patient;
-
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.data_management.DataStorage;
+import com.data_management.Patient;
 import com.data_management.PatientRecord;
 
 /**
@@ -18,6 +17,9 @@ import com.data_management.PatientRecord;
  */
 public class AlertGenerator {
     private DataStorage dataStorage;
+    private AlertFactory bloodPressureAlertFactory;
+    private AlertFactory bloodOxygenAlertFactory;
+    private AlertFactory ecgAlertFactory;
 
     /**
      * Constructs an {@code AlertGenerator} with a specified {@code DataStorage}.
@@ -29,6 +31,9 @@ public class AlertGenerator {
      */
     public AlertGenerator(DataStorage dataStorage) {
         this.dataStorage = dataStorage;
+        this.bloodPressureAlertFactory = new BloodPressureAlertFactory();
+        this.bloodOxygenAlertFactory = new BloodOxygenAlertFactory();
+        this.ecgAlertFactory = new ECGAlertFactory();
     }
 
     /**
@@ -61,14 +66,16 @@ public class AlertGenerator {
             double measurementValue = records.get(i).getMeasurementValue();
             String patientId = records.get(i).getPatientId() + "";
             long timestamp = records.get(i).getTimestamp();
+            
             if (recordType.equals("BloodPressureDiastolic")) {
                 if (measurementValue > 120) {
-                    Alert alert = new AlertFactory().createCriticalBloodPressureAlert(patientId, " High, Disastolic");
+                    Alert alert = bloodPressureAlertFactory.createAlert(patientId, "Critical High, Diastolic", timestamp);
                     triggerAlert(alert);
                 } else if (measurementValue < 60) {
-                    Alert alert = new AlertFactory().createCriticalBloodPressureAlert(patientId, " Low, Disastolic");
+                    Alert alert = bloodPressureAlertFactory.createAlert(patientId, "Critical Low, Diastolic", timestamp);
                     triggerAlert(alert);
                 }
+                
                 if (lastBloodPressureDiastolic == 0) {
                     lastBloodPressureDiastolic = measurementValue;
                 } else if (measurementValue > lastBloodPressureDiastolic
@@ -82,60 +89,63 @@ public class AlertGenerator {
                     bloodPressureTrends.put("decreasingCountDiastolic", bloodPressureTrends.get("decreasingCountDiastolic") + 1);
                     lastBloodPressureDiastolic = measurementValue;
                 }
+                
                 if (bloodPressureTrends.get("increasingCountDiastolic") > 3) {
-                    Alert alert = new AlertFactory().createHighBloodPressureDiastolicAlert(patientId);
+                    Alert alert = bloodPressureAlertFactory.createAlert(patientId, "High Diastolic", timestamp);
                     triggerAlert(alert);
                 } else if (bloodPressureTrends.get("decreasingCountDiastolic") > 3) {
-                    Alert alert = new AlertFactory().createLowBloodPressureDiastolicAlert(patientId);
+                    Alert alert = bloodPressureAlertFactory.createAlert(patientId, "Low Diastolic", timestamp);
                     triggerAlert(alert);
                 }
             } else if (recordType.equals("BloodPressureSystolic")) {
                 if (measurementValue > 180) {
-                    Alert alert = new AlertFactory().createCriticalBloodPressureAlert(patientId, " High, Systolic");
+                    Alert alert = bloodPressureAlertFactory.createAlert(patientId, "Critical High, Systolic", timestamp);
                     triggerAlert(alert);
                 } else if (measurementValue < 90) {
-                    Alert alert = new AlertFactory().createCriticalBloodPressureAlert(patientId, " Low, Systolic");
+                    Alert alert = bloodPressureAlertFactory.createAlert(patientId, "Critical Low, Systolic", timestamp);
                     triggerAlert(alert);
                 }
-                if (lastBloodPressureDiastolic == 0) {
-                    lastBloodPressureDiastolic = measurementValue;
-                } else if (measurementValue > lastBloodPressureDiastolic
+                
+                if (lastBloodPressureSystolic == 0) {
+                    lastBloodPressureSystolic = measurementValue;
+                } else if (measurementValue > lastBloodPressureSystolic
                         && (measurementValue - lastBloodPressureSystolic > 10)) {
                     bloodPressureTrends.put("decreasingCountSysstolic", 0);
                     bloodPressureTrends.put("increasingCountSysstolic", bloodPressureTrends.get("increasingCountSysstolic") + 1);
-                    lastBloodPressureDiastolic = measurementValue;
-                } else if (measurementValue < lastBloodPressureDiastolic
-                        && (lastBloodPressureDiastolic - measurementValue > 10)) {
+                    lastBloodPressureSystolic = measurementValue;
+                } else if (measurementValue < lastBloodPressureSystolic
+                        && (lastBloodPressureSystolic - measurementValue > 10)) {
                     bloodPressureTrends.put("increasingCountSysstolic", 0);
                     bloodPressureTrends.put("decreasingCountSysstolic", bloodPressureTrends.get("decreasingCountSysstolic") + 1);
-                    lastBloodPressureDiastolic = measurementValue;
+                    lastBloodPressureSystolic = measurementValue;
                 }
+                
                 if (bloodPressureTrends.get("increasingCountSysstolic") > 3) {
-                    Alert alert = new AlertFactory().createHighBloodPressureSystolicAlert(patientId);
+                    Alert alert = bloodPressureAlertFactory.createAlert(patientId, "High Systolic", timestamp);
                     triggerAlert(alert);
                 } else if (bloodPressureTrends.get("decreasingCountSysstolic") > 3) {
-                    Alert alert = new AlertFactory().createLowBloodPressureSystolicAlert(patientId);
+                    Alert alert = bloodPressureAlertFactory.createAlert(patientId, "Low Systolic", timestamp);
                     triggerAlert(alert);
                 }
             }
             else if (recordType.equals("BloodSaturation")) {
                 if (measurementValue < 92) {
-                    Alert alert = new AlertFactory().createCriticalBloodSaturationAlert(patientId);
+                    Alert alert = bloodOxygenAlertFactory.createAlert(patientId, "Critical", timestamp);
                     triggerAlert(alert);
                 }
+                
                 if (lastBloodSaturation == 0) {
                     lastBloodSaturation = measurementValue;
                     lastBloodSaturationTime = timestamp;
-                } else if ((lastBloodSaturation - measurementValue > 5) && (timestamp - lastBloodSaturationTime < 600) ){
-                    Alert alert = new AlertFactory().createHighBloodSaturationDifference(patientId);
+                } else if ((lastBloodSaturation - measurementValue > 5) && (timestamp - lastBloodSaturationTime < 600)) {
+                    Alert alert = bloodOxygenAlertFactory.createAlert(patientId, "High Difference", timestamp);
                     triggerAlert(alert);
                     lastBloodSaturation = measurementValue;
                     lastBloodSaturationTime = timestamp;
                 } 
             }
+            // ECG monitoring could be added here
         }
- 
-        // Implementation goes here
     }
 
     /**
