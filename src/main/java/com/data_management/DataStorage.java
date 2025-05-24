@@ -1,11 +1,11 @@
 package com.data_management;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap; // <-- Use thread-safe map
 import com.alerts.AlertGenerator;
-
+import org.json.JSONObject; 
 /**
  * Manages storage and retrieval of patient data within a healthcare monitoring
  * system.
@@ -13,14 +13,15 @@ import com.alerts.AlertGenerator;
  * patient IDs.
  */
 public class DataStorage {
-    private Map<Integer, Patient> patientMap; // Stores patient objects indexed by their unique patient ID.
+    // Use ConcurrentHashMap for thread-safe, concurrent updates
+    private final Map<Integer, Patient> patientMap;
 
     /**
      * Constructs a new instance of DataStorage, initializing the underlying storage
      * structure.
      */
     public DataStorage() {
-        this.patientMap = new HashMap<>();
+        this.patientMap = new ConcurrentHashMap<>();
     }
 
     /**
@@ -28,6 +29,7 @@ public class DataStorage {
      * If the patient does not exist, a new Patient object is created and added to
      * the storage.
      * Otherwise, the new data is added to the existing patient's records.
+     * This method is thread-safe for concurrent real-time updates.
      *
      * @param patientId        the unique identifier of the patient
      * @param measurementValue the value of the health metric being recorded
@@ -37,12 +39,12 @@ public class DataStorage {
      *                         milliseconds since the Unix epoch
      */
     public void addPatientData(int patientId, double measurementValue, String recordType, long timestamp) {
-        Patient patient = patientMap.get(patientId);
-        if (patient == null) {
-            patient = new Patient(patientId);
-            patientMap.put(patientId, patient);
+        // Use computeIfAbsent for atomic patient creation
+        Patient patient = patientMap.computeIfAbsent(patientId, Patient::new);
+        // Synchronize on the patient object to avoid race conditions on its records
+        synchronized (patient) {
+            patient.addRecord(measurementValue, recordType, timestamp);
         }
-        patient.addRecord(measurementValue, recordType, timestamp);
     }
 
     /**
@@ -61,7 +63,9 @@ public class DataStorage {
     public List<PatientRecord> getRecords(int patientId, long startTime, long endTime) {
         Patient patient = patientMap.get(patientId);
         if (patient != null) {
-            return patient.getRecords(startTime, endTime);
+            synchronized (patient) {
+                return patient.getRecords(startTime, endTime);
+            }
         }
         return new ArrayList<>(); // return an empty list if no patient is found
     }
@@ -74,7 +78,19 @@ public class DataStorage {
     public List<Patient> getAllPatients() {
         return new ArrayList<>(patientMap.values());
     }
-
+ 
+    public void storeData(String data) {
+         try {
+        JSONObject json = new JSONObject(data);
+        int patientId = json.getInt("patientId");
+        double measurementValue = json.getDouble("measurementValue");
+        String recordType = json.getString("recordType");
+        long timestamp = json.getLong("timestamp");
+        addPatientData(patientId, measurementValue, recordType, timestamp);
+    } catch (Exception e) {
+        System.err.println("Failed to parse/store data: " + e.getMessage());
+    }
+        System.out.println("Storing data: " + data);}
     /**
      * The main method for the DataStorage class.
      * Initializes the system, reads data into storage, and continuously monitors
