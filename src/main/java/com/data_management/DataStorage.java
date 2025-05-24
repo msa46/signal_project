@@ -4,8 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap; // <-- Use thread-safe map
-import com.alerts.AlertGenerator;
+
 import org.json.JSONObject; 
+
+import com.alerts.AlertGenerator; 
 /**
  * Manages storage and retrieval of patient data within a healthcare monitoring
  * system.
@@ -14,14 +16,23 @@ import org.json.JSONObject;
  */
 public class DataStorage {
     // Use ConcurrentHashMap for thread-safe, concurrent updates
+    private static DataStorage instance;
     private final Map<Integer, Patient> patientMap;
 
     /**
      * Constructs a new instance of DataStorage, initializing the underlying storage
      * structure.
      */
-    public DataStorage() {
+    private DataStorage() {
         this.patientMap = new ConcurrentHashMap<>();
+    }
+
+    // implemenattion of singleton pattern for dataStorage
+    public static DataStorage getInstance() {
+        if (instance == null) {
+            instance = new DataStorage();
+        }
+        return instance;
     }
 
     /**
